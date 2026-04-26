@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bolo Seekho - AI Mentor</title>
+  <style>
+    body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0f0f0f; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: white; overflow: hidden; }
+    .container { background: #1a1a1a; padding: 30px; border-radius: 20px; text-align: center; width: 90%; max-width: 450px; border: 1px solid #333; position: relative; }
+    .logo { width: 100px; height: 100px; margin-bottom: 10px; border-radius: 50%; border: 2px solid #ff4d4d; object-fit: cover; }
+    h2 { color: #ff4d4d; margin: 0 0 20px 0; font-size: 28px; }
+    
+    select, button { padding: 12px; margin-top: 10px; border-radius: 8px; border: none; width: 100%; font-weight: bold; outline: none; }
+    select { background: #333; color: white; border: 1px solid #444; }
+    button { background: #ff0000; color: white; cursor: pointer; transition: 0.3s; }
+    button:hover { background: #cc0000; }
+    
+    #output, #reply, #confidence-area { margin-top: 15px; padding: 15px; background: #2a2a2a; border-radius: 10px; text-align: left; font-size: 14px; }
+    #reply { border-left: 4px solid #00ff00; color: #00ff00; line-height: 1.6; min-height: 50px; word-wrap: break-word; }
+    
+    .bar { height: 12px; width: 100%; background: #444; border-radius: 6px; margin: 12px 0; overflow: hidden; border: 1px solid #555; }
+    .fill { height: 100%; width: 0%; background: #ff0000; transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    #confidence-area { display: none; text-align: center; }
+
+    #toast {
+      visibility: hidden; width: 80%; max-width: 350px; background-color: #ffcc00; color: #000; text-align: center;
+      border-radius: 15px; padding: 15px; position: fixed; z-index: 9999; left: 50%; transform: translateX(-50%);
+      bottom: 30px; font-weight: bold; box-shadow: 0 10px 40px rgba(0,0,0,0.6); font-size: 16px; opacity: 0; transition: 0.5s;
+    }
+    #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+    
+    .thinking { opacity: 0.5; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <img src="logo.png" alt="Bolo Seekho Logo" class="logo" onerror="this.src='https://via.placeholder.com/100?text=BS'">
+  <h2>Bolo Seekho</h2>
+
+  <select id="lang">
+    <option value="en-IN">English (Standard)</option>
+    <option value="hi-IN">Hindi (हिन्दी)</option>
+    <option value="bn-IN">Bengali (বাংলা)</option>
+    <option value="ta-IN">Tamil (தமிழ்)</option>
+    <option value="te-IN">Telugu (తెలుగు)</option>
+    <option value="mr-IN">Marathi (मराठी)</option>
+    <option value="gu-IN">Gujarati (ગુજરાતી)</option>
+    <option value="kn-IN">Kannada (ಕನ್ನಡ)</option>
+    <option value="ml-IN">Malayalam (മലയാളം)</option>
+    <option value="pa-IN">Punjabi (ਪੰਜਾਬੀ)</option>
+    <option value="or-IN">Odia (ଓଡ଼ିଆ)</option>
+    <option value="ur-IN">Urdu (اردو)</option>
+  </select>
+
+  <button onclick="startListening()" style="background: #444;">🎤 Tap to Speak</button>
+  <div id="output">Your question will appear here...</div>
+
+  <div id="confidence-area">
+    <div style="font-weight: bold; margin-bottom: 5px; color: #eee;">Confidence Level:</div>
+    <div class="bar"><div class="fill" id="barFill"></div></div>
+    <div id="confidenceText" style="font-weight: bold; margin-top: 5px;">Low (0%)</div>
+  </div>
+
+  <button onclick="sendToMentor()" style="background: #28a745;">💡 Get Mentor Answer</button>
+  <div id="reply">Mentor's answer will appear here...</div>
+</div>
+
+<div id="toast">Try asking in English for better practice!</div>
+
+<script>
+// Logic to handle Speech Recognition
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+let lastTextRaw = "";  
+let selectedLang = "en-IN";
+
+function startListening() {
+  selectedLang = document.getElementById("lang").value;
+  recognition.lang = selectedLang;
+  
+  document.getElementById("output").innerText = "Listening...";
+  document.getElementById("barFill").style.width = "0%";
+  document.getElementById("confidenceText").innerText = "Checking...";
+  document.getElementById("confidence-area").style.display = "none";
+  
+  recognition.start();
+}
+
+recognition.onresult = function(event) {
+  const spokenText = event.results[0][0].transcript;
+  const rawConf = event.results[0][0].confidence;
+  
+  lastTextRaw = spokenText;
+  document.getElementById("output").innerText = spokenText;
+  
+  if (selectedLang === "en-IN") {
+    updateConfidenceUI(spokenText, rawConf);
+  } else {
+      document.getElementById("confidence-area").style.display = "none";
+  }
+};
+
+function updateConfidenceUI(text, conf) {
+  const area = document.getElementById("confidence-area");
+  const textLabel = document.getElementById("confidenceText");
+  const fill = document.getElementById("barFill");
+
+  area.style.display = "block";
+  let score = Math.floor(conf * 100);
+  if (text.length > 10 && score < 90) score += 5;
+  if (score > 100) score = 100;
+
+  let status = "Low";
+  let color = "#ff0000";
+
+  if (score > 50 && score <= 80) {
+    status = "Average";
+    color = "#ffa500";
+  } else if (score > 80) {
+    status = "High";
+    color = "#00ff00";
+  }
+
+  setTimeout(() => {
+    fill.style.width = score + "%";
+    fill.style.background = color;
+    textLabel.style.color = color;
+    // FIXED TEMPLATE LITERAL HERE:
+    textLabel.innerText = `${status} (${score}%)`;
+  }, 100);
+}
+
+function showToast(message) {
+  const toast = document.getElementById("toast");
+  toast.innerText = message; 
+  toast.classList.add("show");
+  setTimeout(() => { toast.classList.remove("show"); }, 5000);
+}
+
+async function sendToMentor() {
+    if (!lastTextRaw) return alert("Please speak a question first!");
+
+    const replyDiv = document.getElementById("reply");
+    replyDiv.innerText = "Bolo Seekho is thinking...";
+    replyDiv.classList.add("thinking");
+    replyDiv.style.color = "#00ff00";
+
+    // 💡 THE NUDGE LOGIC: Check if language is NOT English
+    const langCode = selectedLang.split('-')[0]; // Gets 'hi', 'bn', etc.
+    if (langCode !== 'en') {
+        // This shows the message if they use Hindi, Bengali, etc.
+        alert("Try speaking in English to improve your vocabulary skills!");
+    }
+
+    try {
+        const response = await fetch("http://127.0.0.1:8000/ask_ai/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                question: lastTextRaw,
+                lang: selectedLang
+            }),
+        });
+
+        const data = await response.json();
+        replyDiv.classList.remove("thinking");
+        replyDiv.innerText = data.answer;
+
+        // Make the AI speak the answer
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(data.answer);
+        msg.lang = selectedLang;
+        window.speechSynthesis.speak(msg);
+
+    } catch (error) {
+        replyDiv.classList.remove("thinking");
+        replyDiv.style.color = "#ff4d4d";
+        replyDiv.innerText = "⚠️ Error: " + error.message + ". Check CMD window!";
+    }
+}
+</script>
+</body>
+</html>
