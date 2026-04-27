@@ -161,21 +161,27 @@
         const utterance = new SpeechSynthesisUtterance(data.answer);
         
         if (currentLang === "en-IN") {
-            // Use en-US as fallback because some browsers don't have en-IN installed
             utterance.lang = "en-US";
             utterance.rate = 1.0;
             utterance.pitch = 1.0;
-            
-            // Try to find an explicit English voice
-            const voices = window.speechSynthesis.getVoices();
-            const engVoice = voices.find(v => v.lang.includes("en-IN")) || 
-                             voices.find(v => v.lang.includes("en-US")) || 
-                             voices.find(v => v.lang.includes("en"));
-            if (engVoice) {
-                utterance.voice = engVoice;
-            }
         } else {
             utterance.lang = currentLang;
+        }
+
+        // --- ROBUST VOICE FINDER ---
+        // Some browsers need the voice object explicitly set to play non-English languages reliably
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            const baseLang = utterance.lang.split('-')[0]; // e.g., 'bn' from 'bn-IN'
+            
+            // 1. Try exact match (e.g., bn-IN)
+            // 2. Try base language match (e.g., bn)
+            const targetVoice = voices.find(v => v.lang.replace('_', '-') === utterance.lang) || 
+                                voices.find(v => v.lang.startsWith(baseLang));
+                                
+            if (targetVoice) {
+                utterance.voice = targetVoice;
+            }
         }
         
         window.speechSynthesis.speak(utterance);
