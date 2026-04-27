@@ -1,54 +1,79 @@
 import json
 import os
+import requests
 from django.http import JsonResponse
-from django.conf import settings
-from groq import Groq
+from django.views.decorators.csrf import csrf_exempt
 
-# Initialize the Groq client
-# This looks for 'GROQ_API_KEY' in your settings.py
-client = Groq(api_key=settings.GROQ_API_KEY)
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "llama-3.1-8b-instant"  # Fast & free-tier friendly
 
+
+@csrf_exempt
 def ask_ai(request):
-    """
-    Handles the POST request from the frontend, sends the question to Groq,
-    and returns the AI's response as JSON.
-    """
-    if request.method == "POST":
+    if request.method == 'POST':
         try:
-            # Parse the incoming JSON data
+            # --- Validate API Key ---
+            api_key = os.environ.get("GROQ_API_KEY", "")
+            if not api_key:
+                return JsonResponse(
+                    {'answer': "⚠️ GROQ_API_KEY is not configured on the server."},
+                    status=500,
+                )
+
             data = json.loads(request.body)
-            user_question = data.get("question", "")
-            user_lang = data.get("lang", "en-IN")
+            user_question = data.get('question', '')
+            selected_lang = data.get('lang', 'en-IN')
 
-            if not user_question:
-                return JsonResponse({"answer": "Please ask a question!"}, status=400)
-
-            # Send the request to Groq Cloud (Llama 3 model)
-            completion = client.chat.completions.create(
-                model="llama3-8b-8192",  # High-speed model perfect for hackathons
-                messages=[
-                    {
-                        "role": "system", 
-                        "content": f"You are 'Bolo Seekho', a supportive AI mentor. Provide clear and helpful answers in {user_lang}."
-                    },
-                    {
-                        "role": "user", 
-                        "content": user_question
-                    }
-                ],
-                temperature=0.7,
-                max_tokens=1024,
+            # STRICT PROMPT: Forces AI to match the user's selected language
+            system_prompt = (
+                f"You are a professional mentor. The user is speaking in {selected_lang}. "
+                f"Instructions: Answer the question ONLY in {selected_lang}. Do not use any other language. "
+                f"Keep your answer under 40 words."
             )
 
-            # Extract the text answer
-            answer = completion.choices[0].message.content
+            # --- Call Groq Cloud API (OpenAI-compatible) ---
+            response = requests.post(
+                GROQ_API_URL,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": GROQ_MODEL,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_question},
+                    ],
+                    "temperature": 0.7,
+                    "max_tokens": 150,
+                },
+                timeout=30,
+            )
 
-            return JsonResponse({"answer": answer})
+            if response.status_code == 200:
+                ai_answer = (
+                    response.json()
+                    .get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content", "No response from AI.")
+                )
+                return JsonResponse({'answer': ai_answer})
+            else:
+                error_detail = response.json().get("error", {}).get("message", "Unknown error")
+                return JsonResponse(
+                    {'answer': f"⚠️ AI service error: {error_detail}"},
+                    status=500,
+                )
 
+        except requests.exceptions.Timeout:
+            return JsonResponse(
+                {'answer': "⚠️ AI service timed out. Please try again."},
+                status=504,
+            )
         except Exception as e:
-            # If something goes wrong (like a bad API key or no internet)
-            print(f"Error: {str(e)}")
-            return JsonResponse({"answer": f"⚠️ Mentor Error: {str(e)}"}, status=500)
+            return JsonResponse(
+                {'answer': f"⚠️ Server error: {str(e)}"},
+                status=500,
+            )
 
-    # If someone tries to visit the URL via browser (GET request)
-    return JsonResponse({"error": "Invalid request method. Use POST."}, status=405)
+    return JsonResponse({'error': 'Invalid Method'}, status=405)

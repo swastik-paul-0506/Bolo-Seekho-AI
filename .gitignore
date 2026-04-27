@@ -13,3 +13,11 @@ db.sqlite3
 # Folders
 .vscode/
 venv/
+.gemini/
+
+# Static files (collected for production)
+staticfiles/
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,200 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bolo Seekho - AI Mentor</title>
-  <style>
-    body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0f0f0f; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: white; overflow-y: auto; padding : 40px 0}
-    .container { background: #1a1a1a; padding: 30px; border-radius: 20px; text-align: center; width: 90%; max-width: 450px; border: 1px solid #333; position: relative; }
-    .logo { width: 100px; height: 100px; margin-bottom: 10px; border-radius: 50%; border: 2px solid #ff4d4d; object-fit: cover; }
-    h2 { color: #ff4d4d; margin: 0 0 20px 0; font-size: 28px; }
-    
-    select, button { padding: 12px; margin-top: 10px; border-radius: 8px; border: none; width: 100%; font-weight: bold; outline: none; }
-    select { background: #333; color: white; border: 1px solid #444; }
-    
-    #micBtn { background: #444; color: white; cursor: pointer; }
-    #stopBtn { background: #dc3545; color: white; cursor: pointer; display: none; }
-    #sendBtn { background: #28a745; color: white; cursor: pointer; margin-top: 20px; }
-    button:hover { opacity: 0.9; }
-    
-    #output, #reply, #confidence-area { margin-top: 15px; padding: 15px; background: #2a2a2a; border-radius: 10px; text-align: left; font-size: 14px; min-height: 20px; }
-    #reply { border-left: 4px solid #00ff00; color: #00ff00; line-height: 1.6; word-wrap: break-word; }
-    
-    .bar { height: 12px; width: 100%; background: #444; border-radius: 6px; margin: 12px 0; overflow: hidden; border: 1px solid #555; }
-    .fill { height: 100%; width: 0%; background: #ff0000; transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-    #confidence-area { display: none; text-align: center; }
+    <meta charset="UTF-8">
+    <title>Bolo Seekho - AI Mentor</title>
+    <style>
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0f0f0f; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: white; padding: 20px; }
+        .container { background: #1a1a1a; padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 500px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .logo { width: 120px; height: 120px; border-radius: 50%; border: 3px solid #ff4d4d; margin-bottom: 15px; object-fit: cover; background: #222; }
+        h2 { color: #ff4d4d; margin: 0 0 20px 0; font-size: 28px; }
+        
+        /* Efficiency Score Styling */
+        .score-box { background: #222; border: 1px solid #444; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-around; align-items: center; }
+        .score-item { display: flex; flex-direction: column; }
+        .score-label { font-size: 12px; color: #aaa; text-transform: uppercase; margin-bottom: 5px; }
+        .score-val { color: #00ff00; font-weight: bold; font-size: 20px; }
 
-    .recording-pulse { color: #ff4d4d; font-weight: bold; animation: blinker 1s linear infinite; }
-    @keyframes blinker { 50% { opacity: 0.3; } }
-    
-    .thinking { opacity: 0.5; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
-  </style>
+        select, button { padding: 12px; margin-top: 10px; border-radius: 8px; width: 100%; font-weight: bold; border: none; cursor: pointer; transition: 0.3s; }
+        select { background: #333; color: white; border: 1px solid #444; }
+        #micBtn { background: #444; color: white; }
+        #stopBtn { background: #dc3545; color: white; display: none; }
+        #sendBtn { background: #28a745; color: white; margin-top: 20px; }
+        
+        #output, #reply, #vocab-mentor { margin-top: 15px; padding: 15px; background: #2a2a2a; border-radius: 10px; text-align: left; font-size: 14px; line-height: 1.5; }
+        #reply { color: #00ff00; border-left: 4px solid #00ff00; }
+        
+        /* Vocabulary/Try English Tip */
+        #vocab-mentor { color: #ffc107; border-left: 4px solid #ffc107; display: none; font-weight: 500; }
+        
+        .pulse { color: #ff4d4d; animation: blink 1s linear infinite; }
+        @keyframes blink { 50% { opacity: 0.3; } }
+    </style>
 </head>
 <body>
 
 <div class="container">
-  <img src="logo.png" alt="Bolo Seekho Logo" class="logo" onerror="this.src='https://via.placeholder.com/100?text=BS'">
-  <h2>Bolo Seekho</h2>
+    <img src="/static/logo.png" alt="Bolo Seekho Logo" class="logo" onerror="this.src='https://via.placeholder.com/120?text=BS'">
+    
+    <h2>Bolo Seekho</h2>
 
-  <select id="lang">
-    <option value="en-IN">English (Standard)</option>
-    <option value="hi-IN">Hindi (हिन्दी)</option>
-    <option value="bn-IN">Bengali (বাংলা)</option>
-    <option value="ta-IN">Tamil (தமிழ்)</option>
-    <option value="te-IN">Telugu (తెలుగు)</option>
-    <option value="mr-IN">Marathi (मराठी)</option>
-    <option value="gu-IN">Gujarati (ગુજરાતી)</option>
-    <option value="kn-IN">Kannada (ಕನ್ನಡ)</option>
-    <option value="ml-IN">Malayalam (മലയാളം)</option>
-    <option value="pa-IN">Punjabi (ਪੰਜਾਬੀ)</option>
-    <option value="or-IN">Odia (ଓଡ଼ିଆ)</option>
-    <option value="ur-IN">Urdu (اردو)</option>
-  </select>
+    <div class="score-box">
+        <div class="score-item">
+            <span class="score-label">Efficiency</span>
+            <span id="eff-score" class="score-val">0%</span>
+        </div>
+        <div class="score-item">
+            <span class="score-label">Words Used</span>
+            <span id="word-count" class="score-val">0</span>
+        </div>
+    </div>
 
-  <button id="micBtn" onclick="startListening()">🎤 Tap to Speak</button>
-  <button id="stopBtn" onclick="stopListening()">⏹️ Finish Speaking</button>
+    <select id="lang">
+        <option value="en-IN">English (Standard)</option>
+        <option value="bn-IN">Bengali (বাংলা)</option>
+        <option value="hi-IN">Hindi (हिन्दी)</option>
+        <option value="ta-IN">Tamil (தமிழ்)</option>
+    </select>
 
-  <div id="output">Your question will appear here...</div>
+    <button id="micBtn" onclick="startListening()">🎤 Tap to Speak</button>
+    <button id="stopBtn" onclick="stopListening()">⏹️ Stop Speaking</button>
 
-  <div id="confidence-area">
-    <div style="font-weight: bold; margin-bottom: 5px; color: #eee;">Confidence Level:</div>
-    <div class="bar"><div class="fill" id="barFill"></div></div>
-    <div id="confidenceText" style="font-weight: bold; margin-top: 5px;">Low (0%)</div>
-  </div>
+    <div id="output">Your speech will appear here...</div>
+    
+    <div id="vocab-mentor"></div>
 
-  <button id="sendBtn" onclick="sendToMentor()">💡 Get Mentor Answer</button>
-  <div id="reply">Mentor's answer will appear here...</div>
+    <button id="sendBtn" onclick="sendToMentor()">💡 Get Mentor Answer</button>
+    <div id="reply">AI response...</div>
 </div>
 
 <script>
-const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-let lastTextRaw = "";  
-let selectedLang = "en-IN";
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    let transcript = "";
+    recognition.continuous = true;
+    recognition.interimResults = true;
 
-recognition.continuous = true;
-recognition.interimResults = true;
-
-function startListening() {
-  selectedLang = document.getElementById("lang").value;
-  recognition.lang = selectedLang;
-  lastTextRaw = "";
-  
-  document.getElementById("micBtn").style.display = "none";
-  document.getElementById("stopBtn").style.display = "block";
-  document.getElementById("output").innerHTML = '<span class="recording-pulse">🔴 Listening... Speak now</span>';
-  document.getElementById("confidence-area").style.display = "none";
-  
-  recognition.start();
-}
-
-function stopListening() {
-  recognition.stop();
-}
-
-recognition.onresult = function(event) {
-  let interimTranscript = '';
-  for (let i = event.resultIndex; i < event.results.length; ++i) {
-    if (event.results[i].isFinal) {
-      lastTextRaw = event.results[i][0].transcript;
-      const rawConf = event.results[i][0].confidence;
-      document.getElementById("output").innerText = lastTextRaw;
-      
-      if (selectedLang === "en-IN") {
-        updateConfidenceUI(lastTextRaw, rawConf);
-      }
-    } else {
-      interimTranscript += event.results[i][0].transcript;
-      document.getElementById("output").innerHTML = '<span style="color: #ff4d4d;">Listening:</span> ' + interimTranscript;
-    }
-  }
-};
-
-recognition.onend = function() {
-  document.getElementById("micBtn").style.display = "block";
-  document.getElementById("stopBtn").style.display = "none";
-  if (!lastTextRaw) {
-    document.getElementById("output").innerText = "Your question will appear here...";
-  }
-};
-
-function updateConfidenceUI(text, conf) {
-  const area = document.getElementById("confidence-area");
-  const textLabel = document.getElementById("confidenceText");
-  const fill = document.getElementById("barFill");
-
-  area.style.display = "block";
-  let score = Math.floor(conf * 100);
-  if (text.length > 10 && score < 90) score += 5;
-  if (score > 100) score = 100;
-
-  let status = "Low";
-  let color = "#ff0000";
-
-  if (score > 50 && score <= 80) {
-    status = "Average"; color = "#ffa500";
-  } else if (score > 80) {
-    status = "High"; color = "#00ff00";
-  }
-
-  fill.style.width = score + "%";
-  fill.style.background = color;
-  textLabel.style.color = color;
-  textLabel.innerText = `${status} (${score}%)`;
-}
-
-async function sendToMentor() {
-    if (!lastTextRaw) return alert("Please speak a question first!");
-
-    const replyDiv = document.getElementById("reply");
-    replyDiv.innerText = "Bolo Seekho is thinking...";
-    replyDiv.classList.add("thinking");
-    replyDiv.style.color = "#00ff00";
-
-    const langCode = selectedLang.split('-')[0]; // Gets 'hi', 'bn', etc.
-    if (langCode !== 'en') {
-        // This triggers the alert for Hindi, Bengali, etc.
-        alert("Try speaking in English to improve your vocabulary skills!");
+    function startListening() {
+        recognition.lang = document.getElementById("lang").value;
+        transcript = "";
+        document.getElementById("micBtn").style.display = "none";
+        document.getElementById("stopBtn").style.display = "block";
+        document.getElementById("output").innerHTML = '<span class="pulse">🔴 Listening...</span>';
+        document.getElementById("vocab-mentor").style.display = "none";
+        recognition.start();
     }
 
+    function stopListening() {
+        recognition.stop();
+        document.getElementById("micBtn").style.display = "block";
+        document.getElementById("stopBtn").style.display = "none";
+        processMetrics();
+    }
+
+    recognition.onresult = (event) => {
+        let interim = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) transcript += event.results[i][0].transcript;
+            else interim += event.results[i][0].transcript;
+        }
+        document.getElementById("output").innerText = transcript || interim;
+    };
+
+    function processMetrics() {
+        if (!transcript) return;
+        const words = transcript.trim().split(/\s+/).length;
+        document.getElementById("word-count").innerText = words;
+
+        // Efficiency Score: Penalize for filler words (um, uh, like)
+        const fillers = (transcript.match(/(um|uh|err|like|ah)/gi) || []).length;
+        const score = Math.max(0, 100 - (fillers * 15));
+        document.getElementById("eff-score").innerText = score + "%";
+
+        // RESTORED: Try Speaking English logic
+        const mentorDiv = document.getElementById("vocab-mentor");
+        if (document.getElementById("lang").value !== "en-IN") {
+            mentorDiv.style.display = "block";
+            mentorDiv.innerHTML = "✨ <b>Mentor Tip:</b> Excellent effort! Try repeating this question in <u>English</u> to build your professional vocabulary.";
+        } else {
+            mentorDiv.style.display = "block";
+            mentorDiv.innerHTML = "🚀 <b>Vocabulary Tip:</b> Instead of basic words, try using 'Essential' or 'Crucial' for better impact.";
+        }
+    }
+
+    async function sendToMentor() {
+    if (!transcript) return alert("Please speak a question first!");
+    const r = document.getElementById("reply");
+    const mentorDiv = document.getElementById("vocab-mentor"); // Make sure this ID exists in your HTML
+    r.innerText = "Bolo Seekho is analyzing...";
+    
     try {
-        const response = await fetch("http://127.0.0.1:8000/ask_ai/", {
+        const res = await fetch("/ask_ai/", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                question: lastTextRaw,
-                lang: selectedLang
-            }),
+            body: JSON.stringify({ 
+                question: transcript, 
+                lang: document.getElementById("lang").value 
+            })
         });
+        const data = await res.json();
+        r.innerText = data.answer;
 
-        const data = await response.json();
-        replyDiv.classList.remove("thinking");
-        replyDiv.innerText = data.answer;
-
-        // --- 🔊 DYNAMIC VOICE HANDLER ---
-        window.speechSynthesis.cancel();
-        const msg = new SpeechSynthesisUtterance(data.answer);
-        
-        const langCode = selectedLang.split('-')[0];
-        if (langCode === 'en') {
-            // Find any English voice available on this computer
-            const voices = window.speechSynthesis.getVoices();
-            const englishVoice = voices.find(v => v.lang.startsWith('en'));
-            if (englishVoice) msg.voice = englishVoice;
-            msg.lang = 'en-US'; 
+        // --- MENTOR TIP LOGIC ---
+        const currentLang = document.getElementById("lang").value;
+        mentorDiv.style.display = "block";
+        if (currentLang !== "en-IN") {
+            mentorDiv.innerHTML = "✨ <b>Mentor Tip:</b> Good job! Now, try asking this in <u>English</u> to improve your vocabulary!";
         } else {
-            msg.lang = selectedLang;
+            mentorDiv.innerHTML = "🚀 <b>Vocab Boost:</b> You're doing great! Try using words like 'Advantageous' instead of 'Good'.";
+        }
+
+        // --- VOICE RESPONSE FIX ---
+        window.speechSynthesis.cancel(); // Stop any previous voice
+        const utterance = new SpeechSynthesisUtterance(data.answer);
+        utterance.lang = currentLang;
+        
+        // Ensure English voice is clear
+        if (currentLang === "en-IN") {
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
         }
         
-        window.speechSynthesis.speak(msg);
+        window.speechSynthesis.speak(utterance);
 
-    } catch (error) {
-        replyDiv.classList.remove("thinking");
-        replyDiv.style.color = "#ff4d4d";
-        replyDiv.innerText = "⚠️ Error: " + error.message;
+    } catch (e) { 
+        r.innerText = "Error: AI service is unavailable. Please try again later."; 
     }
 }
+
+    // Ensure voices are loaded for SpeechSynthesis
+    window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
 </script>
 </body>
 </html>
