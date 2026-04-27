@@ -159,12 +159,23 @@
         // --- VOICE RESPONSE FIX ---
         window.speechSynthesis.cancel(); // Stop any previous voice
         const utterance = new SpeechSynthesisUtterance(data.answer);
-        utterance.lang = currentLang;
         
-        // Ensure English voice is clear
         if (currentLang === "en-IN") {
+            // Use en-US as fallback because some browsers don't have en-IN installed
+            utterance.lang = "en-US";
             utterance.rate = 1.0;
             utterance.pitch = 1.0;
+            
+            // Try to find an explicit English voice
+            const voices = window.speechSynthesis.getVoices();
+            const engVoice = voices.find(v => v.lang.includes("en-IN")) || 
+                             voices.find(v => v.lang.includes("en-US")) || 
+                             voices.find(v => v.lang.includes("en"));
+            if (engVoice) {
+                utterance.voice = engVoice;
+            }
+        } else {
+            utterance.lang = currentLang;
         }
         
         window.speechSynthesis.speak(utterance);
