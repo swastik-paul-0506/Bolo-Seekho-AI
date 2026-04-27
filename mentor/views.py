@@ -1,50 +1,54 @@
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import requests
 import json
+import os
+from django.http import JsonResponse
+from django.conf import settings
+from groq import Groq
 
-@csrf_exempt
+# Initialize the Groq client
+# This looks for 'GROQ_API_KEY' in your settings.py
+client = Groq(api_key=settings.GROQ_API_KEY)
+
 def ask_ai(request):
+    """
+    Handles the POST request from the frontend, sends the question to Groq,
+    and returns the AI's response as JSON.
+    """
     if request.method == "POST":
         try:
+            # Parse the incoming JSON data
             data = json.loads(request.body)
-            user_question = data.get('question')
-            user_lang_code = data.get('lang', 'en-IN')
+            user_question = data.get("question", "")
+            user_lang = data.get("lang", "en-IN")
 
-            # Language Mapping
-            lang_map = {
-                "hi-IN": "Hindi",
-                "bn-IN": "Bengali",
-                "ta-IN": "Tamil",
-                "te-IN": "Telugu",
-                "mr-IN": "Marathi",
-                "gu-IN": "Gujarati",
-                "kn-IN": "Kannada",
-                "ml-IN": "Malayalam",
-                "pa-IN": "Punjabi",
-                "en-IN": "English"
-            }
-            
-            target_lang = lang_map.get(user_lang_code, "English")
+            if not user_question:
+                return JsonResponse({"answer": "Please ask a question!"}, status=400)
 
-            # Force the AI to use the correct language
-            system_prompt = f"You are a helpful mentor. The user is asking in {target_lang}. You MUST reply ONLY in {target_lang} script. Do not use English."
-
-            # Sending to Ollama
-            response = requests.post('http://localhost:11434/api/generate', 
-                json={
-                    "model": "llama3.2", 
-                    "prompt": f"{system_prompt}\n\nUser Question: {user_question}",
-                    "stream": False
-                }
+            # Send the request to Groq Cloud (Llama 3 model)
+            completion = client.chat.completions.create(
+                model="llama3-8b-8192",  # High-speed model perfect for hackathons
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": f"You are 'Bolo Seekho', a supportive AI mentor. Provide clear and helpful answers in {user_lang}."
+                    },
+                    {
+                        "role": "user", 
+                        "content": user_question
+                    }
+                ],
+                temperature=0.7,
+                max_tokens=1024,
             )
-            
-            result = response.json()
-            ai_response = result.get('response', 'Sorry, I could not process that.')
 
-            return JsonResponse({'answer': ai_response})
+            # Extract the text answer
+            answer = completion.choices[0].message.content
+
+            return JsonResponse({"answer": answer})
 
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-    
-    return JsonResponse({'error': 'Only POST requests allowed'}, status=400)
+            # If something goes wrong (like a bad API key or no internet)
+            print(f"Error: {str(e)}")
+            return JsonResponse({"answer": f"⚠️ Mentor Error: {str(e)}"}, status=500)
+
+    # If someone tries to visit the URL via browser (GET request)
+    return JsonResponse({"error": "Invalid request method. Use POST."}, status=405)

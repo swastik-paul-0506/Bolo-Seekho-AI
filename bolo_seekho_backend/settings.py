@@ -1,17 +1,21 @@
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# 1. BASE DIRECTORY & ENV LOADING
+# This finds your main folder (BOLO SEEKHO) and loads the .env file
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-hackathon-key-123'
+# 2. SECURITY SETTINGS
+SECRET_KEY = 'django-insecure-your-secret-key-here' # Keep this for now
+DEBUG = True  # Set to False only when you deploy to a real website
+ALLOWED_HOSTS = ['*'] # Allows access from any address (helpful for demos)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# 3. CLOUD AI SETTINGS (The key to your Groq Brain)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-ALLOWED_HOSTS = []
-
-# Application definition
+# 4. INSTALLED APPS
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -19,12 +23,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'mentor',        # Your AI app
-    'corsheaders',   # Helps frontend talk to backend
+    'mentor',  # Your AI app
 ]
 
+# 5. MIDDLEWARE
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware', # MUST BE AT TOP
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -36,10 +39,11 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'bolo_seekho_backend.urls'
 
+# 6. TEMPLATES (How Django finds your index.html)
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR], # Looks in your main folder for index.html
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -54,7 +58,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'bolo_seekho_backend.wsgi.application'
 
-# Database (Default SQLite)
+# 7. DATABASE (Stored locally)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -62,24 +66,21 @@ DATABASES = {
     }
 }
 
-# Password validation
+# 8. PASSWORD VALIDATION
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
+# 9. INTERNATIONALIZATION
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
+# 10. STATIC FILES (CSS, Images, JS)
 STATIC_URL = 'static/'
-
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')] # Folder for your logo
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# 🌍 Crucial for your Frontend to talk to this Backend
-CORS_ALLOW_ALL_ORIGINS = True
