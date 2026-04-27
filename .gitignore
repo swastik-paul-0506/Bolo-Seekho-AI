@@ -1,0 +1,15 @@
+# Python temporary files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables (SECURITY!)
+.env
+key.env
+
+# Database
+db.sqlite3
+
+# Folders
+.vscode/
+venv/
